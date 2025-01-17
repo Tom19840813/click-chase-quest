@@ -1,12 +1,14 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import Square from '../components/Square';
 import Compass from '../components/Compass';
+import { useToast } from "@/hooks/use-toast";
 
 const PixelHunter = () => {
   const [clickCount, setClickCount] = useState(0);
   const [isWon, setIsWon] = useState(false);
   const [targetSquare, setTargetSquare] = useState(() => Math.floor(Math.random() * 10000));
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
+  const { toast } = useToast();
   
   const calculateCompassAngle = useCallback((clickedIndex: number) => {
     if (clickedIndex === null) return 0;
@@ -31,13 +33,20 @@ const PixelHunter = () => {
     
     if (clickCount >= 100 || isWon) return;
     
-    setClickCount(prev => prev + 1);
+    const newClickCount = clickCount + 1;
+    setClickCount(newClickCount);
     setLastClickedIndex(index);
     
     if (index === targetSquare) {
       setIsWon(true);
+    } else if (newClickCount === 100) {
+      toast({
+        title: "Game Over!",
+        description: "You've run out of clicks. The target has been revealed!",
+        variant: "destructive",
+      });
     }
-  }, [clickCount, isWon, targetSquare]);
+  }, [clickCount, isWon, targetSquare, toast]);
 
   const resetGame = useCallback(() => {
     setClickCount(0);
@@ -57,11 +66,11 @@ const PixelHunter = () => {
         key={index}
         index={index}
         isTarget={index === targetSquare}
-        isWon={isWon}
+        isWon={isWon || clickCount >= 100}
         onInteraction={handleInteraction}
       />
     )),
-    [targetSquare, isWon, handleInteraction]
+    [targetSquare, isWon, handleInteraction, clickCount]
   );
 
   return (
