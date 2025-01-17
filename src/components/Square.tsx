@@ -21,8 +21,8 @@ const Square: React.FC<SquareProps> = ({ index, isTarget, isWon, onInteraction }
       }
     }}
     className={`
-      w-full h-full cursor-pointer
-      ${isTarget && isWon ? 'bg-black' : 'bg-blue-200'}
+      w-full h-full cursor-pointer relative
+      ${isTarget && isWon ? 'after:content-[""] after:absolute after:left-1/2 after:top-1/2 after:-translate-x-1/2 after:-translate-y-1/2 after:w-[5px] after:h-[5px] after:bg-black' : 'bg-blue-200'}
       hover:bg-blue-300 active:bg-blue-300
       transition-colors duration-150
     `}
