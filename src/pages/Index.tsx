@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Square from '../components/Square';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Zap, Target, Binary, Trophy, Cpu, Layers, Settings2 } from "lucide-react";
+import { Zap, Target, Binary, Trophy, ShieldAlert, Cpu, Layers, Settings2 } from "lucide-react";
 
 const DIFFICULTIES = {
   EASY: { label: 'EASY', size: 25, energyCost: 1, reward: 20 },
