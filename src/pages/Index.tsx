@@ -205,17 +205,36 @@ const CyberHunt = () => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.5 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="absolute inset-0 bg-cyan-400/10 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center rounded-2xl border-2 border-cyan-400/50"
+                className="absolute inset-0 bg-cyan-400/10 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center rounded-2xl border-2 border-cyan-400/50 z-20"
               >
                 <Trophy size={80} className="text-cyan-400 mb-4 animate-bounce" />
-                <h3 className="text-4xl font-black mb-2">NODE SECURED</h3>
+                <h3 className="text-4xl font-black mb-2 uppercase italic">Node Secured</h3>
                 <p className="text-cyan-400 font-mono mb-8">System synchronization complete.</p>
                 <Button
                   size="lg"
-                  className="bg-cyan-400 text-black font-black hover:bg-cyan-300 px-12 rounded-full"
+                  className="bg-cyan-400 text-black font-black hover:bg-cyan-300 px-12 rounded-full shadow-[0_0_20px_rgba(34,211,238,0.5)]"
                   onClick={resetGame}
                 >
                   NEW SESSION
+                </Button>
+              </motion.div>
+            )}
+
+            {energy < difficulty.energyCost && !isWon && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="absolute inset-0 bg-red-500/10 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center rounded-2xl border-2 border-red-500/50 z-20"
+              >
+                <ShieldAlert size={80} className="text-red-500 mb-4 animate-pulse" />
+                <h3 className="text-4xl font-black mb-2 uppercase italic">Core Depleted</h3>
+                <p className="text-red-500 font-mono mb-8">Insufficient energy for further analysis.</p>
+                <Button
+                  size="lg"
+                  className="bg-red-500 text-white font-black hover:bg-red-400 px-12 rounded-full shadow-[0_0_20px_rgba(239,68,68,0.5)]"
+                  onClick={resetGame}
+                >
+                  RETRY MISSION
                 </Button>
               </motion.div>
             )}
