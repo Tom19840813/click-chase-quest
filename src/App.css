@@ -1,42 +1,58 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+.app-shell {
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.15) 0%, transparent 40%);
+  background-attachment: fixed;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.neon-text {
+  text-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+.glass-pill {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50px;
+}
+
+@keyframes glitch {
+  0% {
+    transform: translate(0)
   }
-  to {
-    transform: rotate(360deg);
+
+  20% {
+    transform: translate(-2px, 2px)
+  }
+
+  40% {
+    transform: translate(-2px, -2px)
+  }
+
+  60% {
+    transform: translate(2px, 2px)
+  }
+
+  80% {
+    transform: translate(2px, -2px)
+  }
+
+  100% {
+    transform: translate(0)
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.glitch-hover:hover {
+  animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite;
 }
 
-.card {
-  padding: 2em;
+.pixel-grid {
+  mask-image: radial-gradient(circle at center, black 60%, transparent 100%);
 }
 
-.read-the-docs {
-  color: #888;
+.hud-border {
+  position: relative;
+  padding: 2px;
+  background: linear-gradient(45deg, var(--neon-violet), var(--neon-cyan));
+  border-radius: inherit;
 }

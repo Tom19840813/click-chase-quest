@@ -1,24 +1,25 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 interface SquareProps {
   index: number;
   isTarget: boolean;
   isWon: boolean;
-  onInteraction: (index: number, e: React.MouseEvent | React.TouchEvent) => void;
+  proximityColor?: string;
+  onInteraction: (index: number, e: any) => void;
 }
 
-const Square: React.FC<SquareProps> = ({ index, isTarget, isWon, onInteraction }) => {
+const Square: React.FC<SquareProps> = memo(({ index, isTarget, isWon, proximityColor, onInteraction }) => {
   return (
     <div
-      className={`w-full h-full cursor-zoom-in bg-blue-200 hover:bg-blue-300 active:bg-blue-300 transition-colors duration-150 relative`}
+      className={`w-full h-full cursor-crosshair transition-all duration-300 relative border-[0.1px] border-white/5`}
+      style={{ backgroundColor: proximityColor || 'rgba(139, 92, 246, 0.05)' }}
       onClick={(e) => onInteraction(index, e)}
-      onTouchStart={(e) => onInteraction(index, e)}
     >
-      {isWon && isTarget && (
-        <div className="w-[5px] h-[5px] bg-black absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+      {(isWon || proximityColor) && isTarget && (
+        <div className="w-full h-full bg-cyan-400 shadow-[0_0_10px_#22d3ee] animate-pulse"></div>
       )}
     </div>
   );
-};
+});
 
 export default Square;

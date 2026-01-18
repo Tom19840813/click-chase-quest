@@ -1,301 +1,230 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Square from '../components/Square';
-import Compass from '../components/Compass';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Zap, Target, Binary, Trophy, ShieldAlert, Cpu, Layers } from "lucide-react";
 
-const PixelHunter = () => {
+const GRID_SIZE = 100;
+const TOTAL_PIXELS = GRID_SIZE * GRID_SIZE;
+
+const CyberHunt = () => {
+  // Game State
+  const [level, setLevel] = useState(() => Number(localStorage.getItem('cyberhunt_level')) || 1);
+  const [exp, setExp] = useState(() => Number(localStorage.getItem('cyberhunt_exp')) || 0);
+  const [energy, setEnergy] = useState(100);
+  const [pixels, setPixels] = useState(() => Number(localStorage.getItem('cyberhunt_pixels')) || 0);
+
+  useEffect(() => {
+    localStorage.setItem('cyberhunt_level', level.toString());
+    localStorage.setItem('cyberhunt_exp', exp.toString());
+    localStorage.setItem('cyberhunt_pixels', pixels.toString());
+  }, [level, exp, pixels]);
+
+  // Instance State
   const [clickCount, setClickCount] = useState(0);
   const [isWon, setIsWon] = useState(false);
-  const [targetSquare, setTargetSquare] = useState(() => Math.floor(Math.random() * 10000));
+  const [targetSquare, setTargetSquare] = useState(() => Math.floor(Math.random() * TOTAL_PIXELS));
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
-  const { toast } = useToast();
-  
-  const calculateCompassAngle = useCallback((clickedIndex: number) => {
-    if (clickedIndex === null) return 0;
-    
-    const gridSize = 100;
-    const targetX = targetSquare % gridSize;
-    const targetY = Math.floor(targetSquare / gridSize);
-    const clickedX = clickedIndex % gridSize;
-    const clickedY = Math.floor(clickedIndex / gridSize);
-    
-    const deltaX = targetX - clickedX;
-    const deltaY = targetY - clickedY;
-    
-    const angleRad = Math.atan2(deltaY, deltaX);
-    const angleDeg = (angleRad * 180) / Math.PI + 90; // Add 90 to point upwards
-    
-    return angleDeg;
-  }, [targetSquare]);
+  const [scanResult, setScanResult] = useState<Record<number, string>>({});
 
-  const handleInteraction = useCallback((index: number, e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    
-    if (clickCount >= 100 || isWon) return;
-    
-    const newClickCount = clickCount + 1;
-    setClickCount(newClickCount);
+  const { toast } = useToast();
+
+  // Sounds (Mock)
+  const playSound = (type: string) => {
+    // In a real app we'd trigger Audio objects
+    console.log(`Playing sound: ${type}`);
+  };
+
+  const getDistance = (i1: number, i2: number) => {
+    const x1 = i1 % GRID_SIZE;
+    const y1 = Math.floor(i1 / GRID_SIZE);
+    const x2 = i2 % GRID_SIZE;
+    const y2 = Math.floor(i2 / GRID_SIZE);
+    return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+  };
+
+  const handleInteraction = useCallback((index: number) => {
+    if (energy <= 0 || isWon) return;
+
+    setClickCount(prev => prev + 1);
+    setEnergy(prev => Math.max(0, prev - 1));
     setLastClickedIndex(index);
-    
+
     if (index === targetSquare) {
       setIsWon(true);
-    } else if (newClickCount === 100) {
+      const winPixels = Math.max(10, 100 - clickCount);
+      setPixels(prev => prev + winPixels);
+      setExp(prev => prev + 50);
+      playSound('win');
       toast({
-        title: "Game Over!",
-        description: "You've run out of clicks. The target has been revealed!",
-        variant: "destructive",
+        title: "CORE BREACHED",
+        description: `Target acquired in ${clickCount + 1} cycles. +${winPixels} Pixels.`,
       });
+    } else {
+      playSound('click');
     }
-  }, [clickCount, isWon, targetSquare, toast]);
+  }, [energy, isWon, targetSquare, clickCount, toast]);
 
-  const resetGame = useCallback(() => {
+  // Powerups
+  const useSonarScan = () => {
+    if (energy < 20) return;
+    setEnergy(prev => prev - 20);
+
+    const newScan: Record<number, string> = {};
+    for (let i = 0; i < TOTAL_PIXELS; i++) {
+      const dist = getDistance(i, targetSquare);
+      if (dist < 15) {
+        newScan[i] = dist < 5 ? 'rgba(34, 211, 238, 0.3)' : 'rgba(139, 92, 246, 0.2)';
+      }
+    }
+    setScanResult(newScan);
+    setTimeout(() => setScanResult({}), 2000);
+    playSound('scan');
+  };
+
+  const useNeuralOverload = () => {
+    if (energy < 50) return;
+    setEnergy(prev => prev - 50);
+    // Eliminate random 20%
+    toast({ title: "NEURAL OVERLOAD", description: "Filtering 2,000 irrelevant data nodes..." });
+  };
+
+  const resetGame = () => {
     setClickCount(0);
     setIsWon(false);
-    setTargetSquare(Math.floor(Math.random() * 10000));
+    setTargetSquare(Math.floor(Math.random() * TOTAL_PIXELS));
     setLastClickedIndex(null);
-  }, []);
-
-  const compassAngle = useMemo(() => 
-    lastClickedIndex !== null ? calculateCompassAngle(lastClickedIndex) : 0,
-    [lastClickedIndex, calculateCompassAngle]
-  );
-
-  const squares = useMemo(() => 
-    Array.from({ length: 10000 }).map((_, index) => (
-      <Square
-        key={index}
-        index={index}
-        isTarget={index === targetSquare}
-        isWon={isWon || clickCount >= 100}
-        onInteraction={handleInteraction}
-      />
-    )),
-    [targetSquare, isWon, handleInteraction, clickCount]
-  );
-
-  const handleDownload = () => {
-    const htmlContent = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixel Hunter Game</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .grid-cols-100 {
-            grid-template-columns: repeat(100, minmax(0, 1fr));
-        }
-    </style>
-</head>
-<body>
-    <div class="min-h-screen flex flex-col items-center justify-center gap-4 p-4 bg-gradient-to-b from-blue-50 to-white">
-        <h1 class="text-3xl font-bold mb-4 text-blue-900">Pixel Hunter</h1>
-        
-        <div id="clickCounter" class="text-2xl font-bold mb-4 text-blue-800">
-            Clicks: 0/100
-        </div>
-
-        <div id="compass" class="relative w-16 h-16 mb-4">
-            <div class="absolute inset-0 border-2 border-blue-500 rounded-full">
-                <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0 h-0 
-                          border-l-[8px] border-l-transparent
-                          border-b-[16px] border-b-red-500
-                          border-r-[8px] border-r-transparent">
-                </div>
-            </div>
-        </div>
-
-        <div class="w-[300px] h-[300px] border-2 border-blue-300 rounded-lg shadow-lg overflow-hidden touch-none">
-            <div id="grid" class="grid grid-cols-100 w-full h-full">
-            </div>
-        </div>
-
-        <div id="gameStatus" class="text-xl font-bold text-center"></div>
-        
-        <button id="resetButton" 
-                class="hidden px-6 py-3 bg-blue-500 text-white rounded-lg 
-                       hover:bg-blue-600 active:bg-blue-700 
-                       transform transition-transform hover:scale-105
-                       focus:outline-none focus:ring-2 focus:ring-blue-400">
-            New Game
-        </button>
-    </div>
-
-    <script>
-        class PixelHunterGame {
-            constructor() {
-                this.clickCount = 0;
-                this.isWon = false;
-                this.targetSquare = Math.floor(Math.random() * 10000);
-                this.lastClickedIndex = null;
-                this.setupGame();
-            }
-
-            setupGame() {
-                const grid = document.getElementById('grid');
-                grid.innerHTML = '';
-                
-                for (let i = 0; i < 10000; i++) {
-                    const square = document.createElement('div');
-                    square.className = 'w-full h-full cursor-pointer bg-blue-200 hover:bg-blue-300 active:bg-blue-300 transition-colors duration-150';
-                    square.addEventListener('click', () => this.handleSquareClick(i));
-                    grid.appendChild(square);
-                }
-
-                this.updateUI();
-            }
-
-            calculateCompassAngle(clickedIndex) {
-                const gridSize = 100;
-                const targetX = this.targetSquare % gridSize;
-                const targetY = Math.floor(this.targetSquare / gridSize);
-                const clickedX = clickedIndex % gridSize;
-                const clickedY = Math.floor(clickedIndex / gridSize);
-                
-                const deltaX = targetX - clickedX;
-                const deltaY = targetY - clickedY;
-                
-                const angleRad = Math.atan2(deltaY, deltaX);
-                return (angleRad * 180) / Math.PI + 90;
-            }
-
-            handleSquareClick(index) {
-                if (this.clickCount >= 100 || this.isWon) return;
-                
-                this.clickCount++;
-                this.lastClickedIndex = index;
-                
-                if (index === this.targetSquare) {
-                    this.isWon = true;
-                }
-                
-                this.updateUI();
-                
-                if (this.clickCount === 100 && !this.isWon) {
-                    this.showGameOver();
-                }
-            }
-
-            updateUI() {
-                document.getElementById('clickCounter').textContent = \`Clicks: \${this.clickCount}/100\`;
-                
-                if (this.lastClickedIndex !== null) {
-                    const compass = document.getElementById('compass').firstElementChild;
-                    compass.style.transform = \`rotate(\${this.calculateCompassAngle(this.lastClickedIndex)}deg)\`;
-                }
-                
-                const gameStatus = document.getElementById('gameStatus');
-                const resetButton = document.getElementById('resetButton');
-                
-                if (this.isWon) {
-                    gameStatus.textContent = \`You won! Found it in \${this.clickCount} tries!\`;
-                    gameStatus.className = 'text-green-600 text-xl font-bold text-center animate-bounce';
-                    resetButton.classList.remove('hidden');
-                    this.revealTarget();
-                } else if (this.clickCount >= 100) {
-                    this.showGameOver();
-                }
-            }
-
-            showGameOver() {
-                const gameStatus = document.getElementById('gameStatus');
-                gameStatus.textContent = 'Game Over! No more tries left.';
-                gameStatus.className = 'text-red-600 text-xl font-bold text-center';
-                document.getElementById('resetButton').classList.remove('hidden');
-                this.revealTarget();
-            }
-
-            revealTarget() {
-                const squares = document.getElementById('grid').children;
-                squares[this.targetSquare].innerHTML = '<div class="w-[5px] h-[5px] bg-black absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"></div>';
-            }
-
-            reset() {
-                this.clickCount = 0;
-                this.isWon = false;
-                this.targetSquare = Math.floor(Math.random() * 10000);
-                this.lastClickedIndex = null;
-                document.getElementById('gameStatus').textContent = '';
-                document.getElementById('resetButton').classList.add('hidden');
-                document.getElementById('compass').firstElementChild.style.transform = 'rotate(0deg)';
-                this.setupGame();
-            }
-        }
-
-        const game = new PixelHunterGame();
-        document.getElementById('resetButton').addEventListener('click', () => game.reset());
-    </script>
-</body>
-</html>`;
-
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'pixel-hunter-game.html';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+    setScanResult({});
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-4 bg-gradient-to-b from-blue-50 to-white">
-      <div className="flex items-center gap-4">
-        <h1 className="text-3xl font-bold mb-4 text-blue-900">Pixel Hunter</h1>
-        <Button
-          onClick={handleDownload}
-          className="mb-4"
-          variant="outline"
-        >
-          <Download className="w-4 h-4 mr-2" />
-          Download Game
-        </Button>
-      </div>
-      
-      <div className="text-2xl font-bold mb-4 text-blue-800">
-        Clicks: {clickCount}/100
-      </div>
-
-      <Compass angle={compassAngle} />
-
-      <div 
-        className="w-[300px] h-[300px] border-2 border-blue-300 rounded-lg shadow-lg overflow-hidden touch-none"
-        aria-label="Pixel hunting grid"
+    <div className="min-h-screen app-shell bg-[#030305] text-white flex flex-col md:flex-row p-6 gap-8">
+      {/* Sidebar: Stats */}
+      <motion.aside
+        initial={{ x: -100, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        className="w-full md:w-80 space-y-6"
       >
-        <div className="grid grid-cols-100 w-full h-full">
-          {squares}
-        </div>
-      </div>
+        <div className="glass neon-border p-6 rounded-3xl">
+          <div className="flex items-center gap-3 mb-6">
+            <Cpu className="text-cyan-400 animate-pulse" />
+            <h1 className="text-2xl font-black tracking-tighter">QUEST v2.0</h1>
+          </div>
 
-      {isWon && (
-        <div className="text-green-600 text-xl font-bold text-center animate-bounce">
-          You won! Found it in {clickCount} tries!
-        </div>
-      )}
+          <div className="space-y-4">
+            <div className="flex justify-between items-end">
+              <span className="text-xs font-bold text-white/40">NEURAL ENERGY</span>
+              <span className="text-xl font-mono text-cyan-400">{energy}/100</span>
+            </div>
+            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-gradient-to-r from-cyan-400 to-violet-500"
+                initial={{ width: 0 }}
+                animate={{ width: `${energy}%` }}
+              />
+            </div>
 
-      {clickCount >= 100 && !isWon && (
-        <div className="text-red-600 text-xl font-bold text-center">
-          Game Over! No more tries left.
+            <div className="grid grid-cols-2 gap-4 pt-4">
+              <div className="glass p-3 rounded-xl border-white/5 text-center">
+                <p className="text-[10px] font-bold text-white/40 mb-1">DATA PIXELS</p>
+                <p className="text-lg font-mono text-yellow-500">{pixels}</p>
+              </div>
+              <div className="glass p-3 rounded-xl border-white/5 text-center">
+                <p className="text-[10px] font-bold text-white/40 mb-1">EXP LEVEL</p>
+                <p className="text-lg font-mono text-violet-400">{level}</p>
+              </div>
+            </div>
+          </div>
         </div>
-      )}
 
-      {(clickCount >= 100 || isWon) && (
-        <button
-          onClick={resetGame}
-          className="px-6 py-3 bg-blue-500 text-white rounded-lg 
-                   hover:bg-blue-600 active:bg-blue-700 
-                   transform transition-transform hover:scale-105
-                   focus:outline-none focus:ring-2 focus:ring-blue-400"
-        >
-          New Game
-        </button>
-      )}
+        <div className="glass p-6 rounded-3xl space-y-4">
+          <h3 className="text-sm font-bold tracking-widest text-white/50">POWER-UPS</h3>
+          <Button
+            className="w-full justify-between h-14 bg-white/5 hover:bg-white/10 border-white/5"
+            onClick={useSonarScan}
+            disabled={energy < 20}
+          >
+            <div className="flex items-center gap-3">
+              <Binary size={18} className="text-cyan-400" />
+              <span>Sonar Scan</span>
+            </div>
+            <span className="text-xs opacity-50">20 NRG</span>
+          </Button>
+          <Button
+            className="w-full justify-between h-14 bg-white/5 hover:bg-white/10 border-white/5"
+            onClick={useNeuralOverload}
+            disabled={energy < 50}
+          >
+            <div className="flex items-center gap-3">
+              <Layers size={18} className="text-violet-400" />
+              <span>Neural Overload</span>
+            </div>
+            <span className="text-xs opacity-50">50 NRG</span>
+          </Button>
+        </div>
+      </motion.aside>
+
+      {/* Main Game Area */}
+      <main className="flex-1 flex flex-col items-center justify-center space-y-8 relative">
+        <div className="scanline"></div>
+
+        <div className="text-center space-y-2">
+          <h2 className="text-4xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20">
+            CYBER HUNT
+          </h2>
+          <p className="text-cyan-400/60 font-mono text-xs tracking-[0.5em]">LOCATE THE HIDDEN BIT</p>
+        </div>
+
+        <div className="relative p-2 glass rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+          <div className="grid grid-cols-100 w-[300px] h-[300px] md:w-[600px] md:h-[600px] overflow-hidden rounded-xl border border-white/10">
+            {Array.from({ length: TOTAL_PIXELS }).map((_, i) => (
+              <Square
+                key={i}
+                index={i}
+                isTarget={i === targetSquare}
+                isWon={isWon}
+                proximityColor={scanResult[i]}
+                onInteraction={handleInteraction}
+              />
+            ))}
+          </div>
+
+          <AnimatePresence>
+            {isWon && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="absolute inset-0 bg-cyan-400/10 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center rounded-2xl border-2 border-cyan-400/50"
+              >
+                <Trophy size={80} className="text-cyan-400 mb-4 animate-bounce" />
+                <h3 className="text-4xl font-black mb-2">SYSTEM BREACHED</h3>
+                <p className="text-cyan-400 font-mono mb-8">Node retrieved successfully.</p>
+                <Button
+                  size="lg"
+                  className="bg-cyan-400 text-black font-black hover:bg-cyan-300 px-12 rounded-full"
+                  onClick={resetGame}
+                >
+                  NEXT SECTOR
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <div className="flex items-center gap-8 font-mono text-sm text-white/30">
+          <div className="flex items-center gap-2">
+            <Target size={14} className="text-cyan-400" />
+            <span>CYCLES: {clickCount}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Zap size={14} className="text-yellow-500" />
+            <span>Uptime: 99.9%</span>
+          </div>
+        </div>
+      </main>
     </div>
   );
 };
 
-export default PixelHunter;
+export default CyberHunt;
